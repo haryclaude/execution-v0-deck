@@ -157,6 +157,21 @@
     letter-spacing: 0.2em; color: var(--neutral-700); text-transform: uppercase; z-index: 101;
   }
 
+  /* Fullscreen overlay — shown when remote requests fullscreen */
+  .fs-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(22, 16, 33, 0.85); backdrop-filter: blur(6px);
+    align-items: center; justify-content: center; cursor: pointer;
+  }
+  .fs-overlay.visible { display: flex; }
+  .fs-overlay-box {
+    text-align: center; padding: 2.5rem 3rem; border-radius: 16px;
+    background: var(--neutral-800); border: 2px solid var(--brand-primary);
+  }
+  .fs-overlay-box .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .fs-overlay-box .msg { font-size: 1.2rem; font-weight: 600; color: var(--neutral-white); }
+  .fs-overlay-box .sub { font-size: 0.85rem; color: var(--neutral-500); margin-top: 0.4rem; }
+
   .slide.title-slide { justify-content: center; align-items: flex-start; }
   .slide.title-slide h1 { font-size: 3.2rem; }
   .title-meta { margin-top: 2rem; font-size: 0.85rem; color: var(--neutral-700); }
@@ -368,6 +383,15 @@
 </div>
 </div>
 
+<!-- FULLSCREEN OVERLAY -->
+<div class="fs-overlay" id="fsOverlay" onclick="goFullscreen()">
+  <div class="fs-overlay-box">
+    <div class="icon">&#9974;</div>
+    <div class="msg">Tap here to go fullscreen</div>
+    <div class="sub">Requested from your remote</div>
+  </div>
+</div>
+
 <!-- NAVIGATION BAR -->
 <div class="nav-bar">
   <div class="slide-counter" id="slideCounter">1 / 10</div>
@@ -409,6 +433,7 @@
 
     conn.on('data', function(data) {
       if (typeof data.slide === 'number') showSlide(data.slide, false);
+      if (data.action === 'fullscreen') showFsOverlay();
     });
 
     conn.on('close', function() {
@@ -441,6 +466,17 @@
 
   function nextSlide() { showSlide(current + 1); }
   function prevSlide() { showSlide(current - 1); }
+
+  // Fullscreen
+  function showFsOverlay() {
+    if (document.fullscreenElement) return; // already fullscreen
+    document.getElementById('fsOverlay').classList.add('visible');
+  }
+
+  function goFullscreen() {
+    document.getElementById('fsOverlay').classList.remove('visible');
+    document.documentElement.requestFullscreen().catch(function() {});
+  }
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
