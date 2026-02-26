@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Speaker Remote — OS-First Execution</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --brand-primary: #D9008D;
+    --brand-secondary: #443152;
+    --neutral-900: #161021;
+    --neutral-800: #352D42;
+    --neutral-700: #665E75;
+    --neutral-500: #A7A1B2;
+    --neutral-300: #D7D3E0;
+    --neutral-200: #E8E4F0;
+    --neutral-white: #FAF9FC;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--neutral-900);
+    color: var(--neutral-white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--neutral-800);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .header .label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--brand-primary);
+    font-weight: 700;
+  }
+
+  .slide-counter {
+    font-size: 0.85rem;
+    color: var(--neutral-500);
+    font-weight: 600;
+  }
+
+  /* ===== SLIDE INFO ===== */
+  .slide-info {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .slide-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--brand-primary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .slide-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--neutral-white);
+    line-height: 1.3;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--brand-primary);
+  }
+
+  .notes-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--neutral-500);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .notes-text {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--neutral-300);
+  }
+
+  /* ===== NAV BUTTONS ===== */
+  .nav-area {
+    flex-shrink: 0;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--neutral-800);
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .nav-btn {
+    flex: 1;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--neutral-700);
+    background: var(--neutral-800);
+    color: var(--neutral-white);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .nav-btn:active { background: var(--brand-primary); }
+  .nav-btn .arrow { font-size: 1.3rem; }
+
+  /* ===== PROGRESS ===== */
+  .progress-bar {
+    height: 3px;
+    background: var(--neutral-800);
+    flex-shrink: 0;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--brand-primary);
+    transition: width 0.3s ease;
+  }
+
+  /* ===== SAFE AREA (iPhone notch) ===== */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .nav-area { padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="label">Speaker Remote</div>
+  <div class="slide-counter" id="slideCounter">1 / 10</div>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width: 10%"></div></div>
+
+<div class="slide-info" id="slideInfo">
+  <div class="slide-label" id="slideLabel"></div>
+  <div class="slide-title" id="slideTitle"></div>
+  <div class="notes-label">Speaker Notes</div>
+  <div class="notes-text" id="notesText"></div>
+</div>
+
+<div class="nav-area">
+  <button class="nav-btn" onclick="prevSlide()"><span class="arrow">&larr;</span> Prev</button>
+  <button class="nav-btn" onclick="nextSlide()">Next <span class="arrow">&rarr;</span></button>
+</div>
+
+<script>
+  const total = 10;
+  let current = 0;
+
+  const slideData = [
+    {
+      label: "Feb 2026 · Internal",
+      title: "OS-First Execution: From Philosophy to Proof-Point",
+      notes: "This session has one job: show you how our OS-first framework works in practice. Not theory \u2014 a real execution example with real numbers. Exit OS v0 is the proof-point. We'll walk through what we intended, what actually happened, what we learned, and how v1 is being shaped by those learnings. No decisions are expected today. This is an illustration of the iteration loop working."
+    },
+    {
+      label: "The Construct",
+      title: "The New Way of Working: Codify Execution in the OS First",
+      notes: "This is the foundational shift. Historically, execution ran on tribal knowledge, discretion, and escalation. The OS-first approach means: before we execute anything, we write the rulebook. The rulebook is deterministic \u2014 same input, same output, regardless of who\u2019s executing. We aligned with Satyam and Nishit on this: codify first, then execute. Now, the obvious question \u2014 and I know it\u2019s on everyone\u2019s mind \u2014 is: doesn\u2019t writing a rulebook take time? Doesn\u2019t this slow us down? That\u2019s exactly what the next slide addresses."
+    },
+    {
+      label: "The Framework",
+      title: "Velocity with Forcing-Function Decisions: Ship Fast, Learn Fast, Decide Fast",
+      notes: "This is the answer to \u2018why not wait for product?\u2019 If we wait, we lose weeks \u2014 sometimes months \u2014 of learning. Velocity says: start with people-led execution, generate real data, iterate fast, and at v1.5, force a binary decision \u2014 either product builds it, or we kill it. There is no third option where it lingers as a manual process forever. This creates a deterministic cadence: learn, refine, decide. The ownership is clean: execution owns v0/v1 running and learning. Product owns productization from v1 onward. Execution is not doing product\u2019s job \u2014 it\u2019s generating the data that makes product\u2019s job faster and better-informed. Pause here \u2014 does this framing make sense before we go to the proof-point?"
+    },
+    {
+      label: "The Proof-Point",
+      title: "Exit OS: Handle Partner Exits Without Chaos",
+      notes: "Exit OS exists because partner exits were historically messy \u2014 discretion, negotiation, delays. The OS removes all of that. It\u2019s a system, not a conversation. It decides user state, drives actions, and closes. The explicit exclusions matter and I want to call them out: no dongles, no re-marketing, no \u2018let\u2019s set up a call to hear them out.\u2019 These exclusions are not callous \u2014 they\u2019re what make the system deterministic and fair. If we allow exceptions, we no longer have an OS, we have a suggestion box. The primary objective is customer continuity \u2014 uninterrupted service where possible, clear resolution where not. This is NOT retention. NOT win-back. The OS handles transition, not persuasion."
+    },
+    {
+      label: "Architecture",
+      title: "Four Layers, Strict Boundaries",
+      notes: "Why layers? Because scope creep kills OS integrity. Every past exit attempt eventually blurred \u2014 \u2018but what about the router? what about the wallet? can we try to save them?\u2019 The layering model makes it structurally impossible for downstream concerns to infect upstream decisions. Exit OS decides. CSL supports within strict bounds. ACSL closes assets. RCRM \u2014 if ever triggered \u2014 is a whisper, not a campaign. Each layer has its own kill conditions. For the people in this room: Comms \u2014 your templates are driven by Exit OS states. Supply chain \u2014 NetBox recovery lives in ACSL with defined SLAs. Finance \u2014 settlement sits in ACSL. Brand \u2014 RCRM is your domain if it ever activates, and it\u2019s designed to be minimal and calm."
+    },
+    {
+      label: "v0 Execution",
+      title: "Exit OS v0: 10 Partner Exits, 367 Users, Real Data",
+      notes: "These are not cherry-picked numbers. We ran 10 real exits. Of the 10, 8 were in the standard notice period (S2, 14-day). Two \u2014 Starnet and G Square \u2014 went through fast-path execution (S4, 0-day notice by design). The 367 users are from these two S4 partners. The split tells you something important: 62% of impacted users land in U2 \u2014 service ending, not migrating. Any OS that only handles the happy path would fail on the majority of cases. v0 was designed to handle both paths, and the data shows what actually happened on each. Also worth noting: 3 of the notice-period partners had zero active base. They consumed operational runway but had no customer impact. That\u2019s a v1 learning \u2014 fast-close these to free up capacity."
+    },
+    {
+      label: "U1 \u2014 Migration Path",
+      title: "The Bottleneck Is Supply, Not Ops",
+      notes: "Two very different pictures, but the same underlying insight. Starnet had new partner interest at 75%, and the migration funnel worked \u2014 100% of slot-confirmed users moved. G Square had almost no new partner interest (16%), so the funnel starved. The key number on both sides: slot-to-migration success is 90-100%. The lesson for v1: migration execution is not the problem. Partner supply activation is. If supply exists, the OS delivers. If it doesn\u2019t, no amount of process excellence compensates. This is a supply chain and BD insight, not an operations insight. Saurabh, this is relevant to your function \u2014 and it\u2019s the kind of learning that only surfaces from running v0 on real exits."
+    },
+    {
+      label: "U2 \u2014 NetBox Recovery Path",
+      title: "Process Integrity Determines Outcomes",
+      notes: "G Square and Starnet tell a clear story. When the process runs cleanly \u2014 Wiom calls, user agrees, Wiom picks up \u2014 recovery hits 62%. When the process is compromised, as with Starnet where 80 routers were reported as \u2018partner took router\u2019 against only 49 agreements, recovery collapses to 15%. The 80 vs 49 gap is an important signal \u2014 it suggests collection happened outside our process. This isn\u2019t a failure of the OS design. It\u2019s a realization: the OS assumed custody integrity that didn\u2019t hold under R2 conditions. v1 addresses this with a containment and enforcement layer. The system surfaced the problem in week 3, not month 6. That\u2019s exactly what fast iteration is designed to do \u2014 surface truth quickly so we can fix it in the next version."
+    },
+    {
+      label: "The Iteration Loop",
+      title: "v0 Learnings \u2192 v1 Design",
+      notes: "This is the payoff of Velocity. v0 ran for 4 weeks. It generated 4 clear, data-backed learnings that are now shaping v1. Without v0, these would be theoretical risks on a whiteboard. With v0, they\u2019re measured realities with specific fixes. Let me walk through each: First, supply is the binding constraint for U1 \u2014 v1 triggers supply activation earlier and pre-maps partner coverage. Second, process custody is fragile under pressure \u2014 v1 adds an integrity and enforcement layer. Third, router pickup was structurally broken at 7.5% across notice partners \u2014 v1 tightens SLAs and ownership before we scale exits. The open items at the bottom are what v1 is actively designing for. No decision is needed from anyone today \u2014 this is showing you the iteration loop producing real refinement."
+    },
+    {
+      label: "The Bigger Picture",
+      title: "This Is How Every OS Will Evolve",
+      notes: "Exit OS is the example. But the framework is general. Every operating system we build \u2014 onboarding, support, recovery, whatever comes next \u2014 follows this same loop. Write it. Ship it as people-led v0. Learn. Iterate. At v1.5, either product picks it up or we kill it. No process lingers. No manual workaround becomes permanent. The speed of learning matters more than perfection of v0. If v0 were perfect, we wouldn\u2019t need the framework. The point is that v0 is intentionally imperfect \u2014 it\u2019s designed to surface reality fast so the next version is better. That\u2019s the construct. Exit OS v0 just demonstrated it works. Thank you. Happy to take questions."
+    }
+  ];
+
+  // Sync channel with main deck
+  const channel = new BroadcastChannel('deck-sync');
+
+  function showSlide(n, broadcast = true) {
+    current = Math.max(0, Math.min(n, total - 1));
+    const s = slideData[current];
+    document.getElementById('slideLabel').textContent = s.label;
+    document.getElementById('slideTitle').textContent = s.title;
+    document.getElementById('notesText').textContent = s.notes;
+    document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('progressFill').style.width = ((current + 1) / total * 100) + '%';
+    // Scroll notes to top
+    document.getElementById('slideInfo').scrollTop = 0;
+    if (broadcast) channel.postMessage({ slide: current, from: 'remote' });
+  }
+
+  function nextSlide() { showSlide(current + 1); }
+  function prevSlide() { showSlide(current - 1); }
+
+  // Listen for main deck changes
+  channel.onmessage = function(e) {
+    if (e.data.from === 'deck') showSlide(e.data.slide, false);
+  };
+
+  // Keyboard support
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+  });
+
+  // Swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', function(e) {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+  });
+
+  // Initialize
+  showSlide(0, false);
+</script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OS-First Execution: From Philosophy to Proof-Point</title>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --brand-primary: #D9008D;
+    --brand-secondary: #443152;
+    --neutral-900: #161021;
+    --neutral-800: #352D42;
+    --neutral-700: #665E75;
+    --neutral-500: #A7A1B2;
+    --neutral-300: #D7D3E0;
+    --neutral-200: #E8E4F0;
+    --neutral-100: #F1EDF7;
+    --neutral-white: #FAF9FC;
+    --positive-600: #008043;
+    --negative-600: #E01E00;
+    --warning-600: #FF8000;
+    --info-600: #6D17CE;
+  }
+
+  html { font-size: 16px; scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--neutral-900);
+    color: var(--neutral-white);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .deck { width: 100vw; height: 100vh; position: relative; }
+
+  .slide {
+    width: 100vw; height: 100vh;
+    display: none; flex-direction: column; justify-content: center;
+    padding: 4rem 6rem;
+    position: absolute; top: 0; left: 0;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+
+  .slide.active { display: flex; opacity: 1; }
+
+  .slide-label {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.15em; color: var(--brand-primary); margin-bottom: 0.75rem;
+  }
+
+  .slide h1 { font-size: 2.8rem; font-weight: 700; line-height: 1.15; color: var(--neutral-white); margin-bottom: 1rem; }
+  .slide h1 .accent { color: var(--brand-primary); }
+  .slide h2 { font-size: 2rem; font-weight: 700; line-height: 1.2; color: var(--neutral-white); margin-bottom: 1.5rem; }
+  .slide h2 .accent { color: var(--brand-primary); }
+  .subtitle { font-size: 1.25rem; color: var(--neutral-500); margin-top: 0.5rem; line-height: 1.5; }
+  .slide p { font-size: 1.1rem; line-height: 1.7; color: var(--neutral-300); max-width: 52rem; }
+
+  .bullets { list-style: none; margin-top: 0.5rem; }
+  .bullets li {
+    font-size: 1.15rem; line-height: 1.6; color: var(--neutral-200);
+    padding: 0.5rem 0; padding-left: 1.5rem; position: relative;
+  }
+  .bullets li::before {
+    content: ''; position: absolute; left: 0; top: 0.85rem;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--brand-primary);
+  }
+  .bullets li strong { color: var(--neutral-white); font-weight: 600; }
+  .bullets li .tag {
+    display: inline-block; font-size: 0.75rem; font-weight: 600;
+    padding: 0.15rem 0.5rem; border-radius: 4px; margin-left: 0.5rem; vertical-align: middle;
+  }
+  .tag-negative { background: var(--negative-600); color: #fff; }
+
+  .bottomline {
+    margin-top: 1.5rem; padding: 1rem 1.25rem;
+    background: rgba(217, 0, 141, 0.08); border-left: 3px solid var(--brand-primary);
+    border-radius: 0 6px 6px 0; font-size: 1.05rem; color: var(--neutral-white); max-width: 52rem;
+  }
+  .bottomline strong { color: var(--brand-primary); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-top: 1rem; }
+  .col-card { background: rgba(68, 49, 82, 0.25); border: 1px solid var(--neutral-800); border-radius: 10px; padding: 1.5rem; }
+  .col-card h3 { font-size: 1.15rem; font-weight: 700; color: var(--neutral-white); margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--brand-primary); }
+  .col-card .stat-row { display: flex; justify-content: space-between; padding: 0.35rem 0; font-size: 0.95rem; color: var(--neutral-300); border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .col-card .stat-row:last-child { border-bottom: none; }
+  .col-card .stat-row .val { font-weight: 700; color: var(--neutral-white); }
+  .col-card .insight { margin-top: 0.75rem; padding: 0.6rem 0.8rem; background: rgba(217, 0, 141, 0.1); border-radius: 6px; font-size: 0.9rem; color: var(--brand-primary); font-weight: 600; }
+
+  .layer-stack { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; max-width: 56rem; }
+  .layer { display: flex; align-items: flex-start; padding: 1rem 1.25rem; border-radius: 8px; gap: 1rem; }
+  .layer-name { font-weight: 700; font-size: 0.85rem; min-width: 5rem; padding: 0.25rem 0.6rem; border-radius: 4px; text-align: center; flex-shrink: 0; }
+  .layer-desc { font-size: 0.95rem; line-height: 1.5; color: var(--neutral-200); }
+  .layer-1 { background: rgba(217, 0, 141, 0.12); border: 1px solid rgba(217, 0, 141, 0.3); }
+  .layer-1 .layer-name { background: var(--brand-primary); color: #fff; }
+  .layer-2 { background: rgba(0, 128, 67, 0.08); border: 1px solid rgba(0, 128, 67, 0.25); }
+  .layer-2 .layer-name { background: var(--positive-600); color: #fff; }
+  .layer-3 { background: rgba(255, 128, 0, 0.08); border: 1px solid rgba(255, 128, 0, 0.25); }
+  .layer-3 .layer-name { background: var(--warning-600); color: #fff; }
+  .layer-4 { background: rgba(109, 23, 206, 0.08); border: 1px solid rgba(109, 23, 206, 0.25); }
+  .layer-4 .layer-name { background: var(--info-600); color: #fff; }
+
+  .flow { display: flex; align-items: center; gap: 0; margin: 1.5rem 0; flex-wrap: wrap; }
+  .flow-step { padding: 0.8rem 1.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; color: var(--neutral-white); white-space: nowrap; }
+  .flow-arrow { font-size: 1.5rem; color: var(--neutral-500); padding: 0 0.5rem; }
+  .flow-step:nth-child(1) { background: var(--brand-secondary); }
+  .flow-step:nth-child(3) { background: var(--brand-primary); }
+  .flow-step:nth-child(5) { background: var(--positive-600); }
+  .flow-step:nth-child(7) { background: var(--warning-600); }
+  .flow-step:nth-child(9) { background: var(--info-600); }
+
+  .open-items { margin-top: 1.5rem; padding: 1.25rem; background: rgba(68, 49, 82, 0.2); border: 1px solid var(--neutral-800); border-radius: 8px; max-width: 52rem; }
+  .open-items h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--warning-600); margin-bottom: 0.75rem; }
+  .open-items ul { list-style: none; }
+  .open-items li { font-size: 0.95rem; color: var(--neutral-300); padding: 0.3rem 0; padding-left: 1.25rem; position: relative; }
+  .open-items li::before { content: '\25B8'; position: absolute; left: 0; color: var(--warning-600); }
+
+  .nav-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 3.5rem;
+    background: rgba(22, 16, 33, 0.92); backdrop-filter: blur(8px);
+    border-top: 1px solid var(--neutral-800);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; z-index: 100;
+  }
+  .nav-bar .slide-counter { font-size: 0.85rem; color: var(--neutral-500); font-weight: 600; min-width: 5rem; }
+  .progress-bar { flex: 1; height: 3px; background: var(--neutral-800); border-radius: 2px; margin: 0 1.5rem; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--brand-primary); border-radius: 2px; transition: width 0.4s ease; }
+  .nav-btns { display: flex; gap: 0.5rem; min-width: 5rem; justify-content: flex-end; }
+  .nav-btn {
+    background: var(--neutral-800); border: 1px solid var(--neutral-700); color: var(--neutral-white);
+    width: 2.2rem; height: 2.2rem; border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: background 0.2s;
+  }
+  .nav-btn:hover { background: var(--brand-secondary); }
+
+  .brand-mark {
+    position: fixed; top: 1rem; left: 1.5rem; font-size: 0.8rem; font-weight: 700;
+    letter-spacing: 0.2em; color: var(--neutral-700); text-transform: uppercase; z-index: 101;
+  }
+
+  .slide.title-slide { justify-content: center; align-items: flex-start; }
+  .slide.title-slide h1 { font-size: 3.2rem; }
+  .title-meta { margin-top: 2rem; font-size: 0.85rem; color: var(--neutral-700); }
+  .closing-flow { margin: 2rem 0; }
+
+  @media (max-width: 900px) {
+    .slide { padding: 2rem 2.5rem; }
+    .slide h1 { font-size: 2rem; }
+    .slide h2 { font-size: 1.5rem; }
+    .two-col { grid-template-columns: 1fr; }
+    .flow { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="brand-mark">Wiom &mdash; Internal</div>
+
+<div class="deck">
+<!-- SLIDE 1: TITLE -->
+<div class="slide title-slide active">
+  <div class="slide-label">Feb 2026 &middot; Internal</div>
+  <h1>OS-First Execution:<br><span class="accent">From Philosophy to Proof-Point</span></h1>
+  <p class="subtitle">Exit OS &mdash; v0 Learnings &amp; the Path to v1</p>
+  <div class="title-meta">Wiom &middot; Confidential &middot; For Functional Heads &amp; Founders</div>
+</div>
+
+<!-- SLIDE 2: THE CONSTRUCT -->
+<div class="slide">
+  <div class="slide-label">The Construct</div>
+  <h2>The New Way of Working:<br><span class="accent">Codify Execution in the OS First</span></h2>
+  <ul class="bullets">
+    <li>Execution gets codified as an <strong>Operating System</strong> &mdash; a rulebook built on systems thinking</li>
+    <li>Eventually product/tech runs these as agents &mdash; but we <strong>cannot wait</strong> for product/tech bandwidth to begin learning</li>
+    <li>The OS is the source of truth: <strong>execution follows the rulebook, not discretion</strong></li>
+  </ul>
+  <div class="bottomline">
+    <strong>The shift:</strong> From tribal knowledge and escalation &rarr; to deterministic, codified systems that anyone can execute consistently.
+  </div>
+</div>
+
+<!-- SLIDE 3: VELOCITY -->
+<div class="slide">
+  <div class="slide-label">The Framework</div>
+  <h2>Velocity with Forcing-Function Decisions:<br><span class="accent">Ship Fast, Learn Fast, Decide Fast</span></h2>
+  <ul class="bullets">
+    <li><strong>v0:</strong> Ship SOPs quickly as people-led execution. Don't wait for perfect tech.</li>
+    <li><strong>v0 &rarr; v1:</strong> Learn from on-ground reality. Refine with real data.</li>
+    <li><strong>v1 &rarr; v1.5:</strong> Strict time-boxed review. Only two outcomes: <strong>PRODUCTIZE</strong> or <strong>KILL</strong>. <span class="tag tag-negative">No third option</span></li>
+    <li><strong>Ownership:</strong> Execution owns v0/v1 learning. Product owns productization from v1 onward.</li>
+  </ul>
+  <div class="bottomline">
+    <strong>What this solves:</strong> Prevents "manual forever" AND prevents "theoretical OS that waits for roadmap space."
+  </div>
+</div>
+
+<!-- SLIDE 4: EXIT OS DEFINITION -->
+<div class="slide">
+  <div class="slide-label">The Proof-Point</div>
+  <h2>Exit OS: Handle Partner Exits<br><span class="accent">Without Chaos</span></h2>
+  <ul class="bullets">
+    <li><strong>Primary objective:</strong> Customer continuity &mdash; uninterrupted service OR clear, timely resolution</li>
+    <li><strong>Properties:</strong> System-led, deterministic, monotonic (no reversals), non-negotiable</li>
+    <li><strong>NOT:</strong> retention, win-back, substitute connectivity, or partner appeasement</li>
+    <li><strong>No:</strong> meetings, appeals, or interviews to "hear the partner out"</li>
+  </ul>
+  <div class="bottomline">
+    <strong>Design principle:</strong> Same input &rarr; same output, regardless of who is executing or which partner is exiting.
+  </div>
+</div>
+
+<!-- SLIDE 5: LAYERING MODEL -->
+<div class="slide">
+  <div class="slide-label">Architecture</div>
+  <h2>Four Layers, <span class="accent">Strict Boundaries</span></h2>
+  <div class="layer-stack">
+    <div class="layer layer-1">
+      <div class="layer-name">Exit OS</div>
+      <div class="layer-desc"><strong>Decision Layer.</strong> Decides user state (U0 / U1 / U2). Drives partner and accountability actions. No fallbacks, no compensation, no delay for optics.</div>
+    </div>
+    <div class="layer layer-2">
+      <div class="layer-name">CSL</div>
+      <div class="layer-desc"><strong>Continuity Support.</strong> U2 only. Optional, rule-based, short fixed window. Read-only to Exit OS (never writes upstream). Has kill triggers — if it starts reducing churn, it dies.</div>
+    </div>
+    <div class="layer layer-3">
+      <div class="layer-name">ACSL</div>
+      <div class="layer-desc"><strong>Asset Closure &amp; Settlement.</strong> NetBox return + ledger closure. No negotiation, no promises of future service, no re-entry delay.</div>
+    </div>
+    <div class="layer layer-4">
+      <div class="layer-name">RCRM</div>
+      <div class="layer-desc"><strong>Re-entry CRM.</strong> Only after Exit OS + CSL + ACSL are all complete AND material change exists. Single calm informational touch. No chasing, no persuasion, no apology.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 6: v0 SCALE -->
+<div class="slide">
+  <div class="slide-label">v0 Execution</div>
+  <h2>Exit OS v0: <span class="accent">10 Partner Exits, 367 Users, Real Data</span></h2>
+  <ul class="bullets">
+    <li><strong>10 partner exits</strong> run (late Jan &rarr; late Feb 2026, data cut-off Feb 28)</li>
+    <li>8 partners in notice period (S2, 14-day) + <strong>2 partners in fast-path execution</strong> (S4, 0-day)</li>
+    <li>S4 users impacted: <strong>367</strong> (Starnet: 182 &middot; G Square: 185)</li>
+    <li>User state split: <strong>U1 = 139 (38%)</strong> migrating &nbsp;|&nbsp; <strong>U2 = 228 (62%)</strong> service ending</li>
+  </ul>
+  <div class="bottomline">
+    <strong>Dominant reality is U2.</strong> This is not a tiny, convenient pilot &mdash; the OS had to handle the hard path for the majority of users.
+  </div>
+</div>
+
+<!-- SLIDE 7: U1 FUNNEL -->
+<div class="slide">
+  <div class="slide-label">U1 &mdash; Migration Path</div>
+  <h2>The Bottleneck Is <span class="accent">Supply, Not Ops</span></h2>
+  <div class="two-col">
+    <div class="col-card">
+      <h3>Starnet U1 &nbsp;&middot;&nbsp; 76 users</h3>
+      <div class="stat-row"><span>New partner interest</span><span class="val">75%</span></div>
+      <div class="stat-row"><span>Migrated</span><span class="val">56.6%</span></div>
+      <div class="stat-row"><span>Pending</span><span class="val">43.4%</span></div>
+      <div class="stat-row"><span>Slot-confirmed &rarr; migrated</span><span class="val" style="color: var(--positive-600);">100%</span></div>
+      <div class="insight">Once slots exist, execution works.</div>
+    </div>
+    <div class="col-card">
+      <h3>G Square U1 &nbsp;&middot;&nbsp; 63 users</h3>
+      <div class="stat-row"><span>New partner interest</span><span class="val" style="color: var(--negative-600);">16%</span></div>
+      <div class="stat-row"><span>Migrated</span><span class="val">14.3%</span></div>
+      <div class="stat-row"><span>Pending</span><span class="val">85.7%</span></div>
+      <div class="stat-row"><span>Slot-confirmed &rarr; migrated</span><span class="val" style="color: var(--positive-600);">90%</span></div>
+      <div class="insight">Supply activation is the binding constraint.</div>
+    </div>
+  </div>
+  <div class="bottomline">
+    <strong>Migration machinery works.</strong> The constraint is upstream: do we have a new partner with available slots?
+  </div>
+</div>
+
+<!-- SLIDE 8: U2 FUNNEL -->
+<div class="slide">
+  <div class="slide-label">U2 &mdash; NetBox Recovery Path</div>
+  <h2>Process Integrity <span class="accent">Determines Outcomes</span></h2>
+  <div class="two-col">
+    <div class="col-card">
+      <h3>G Square U2 &nbsp;&middot;&nbsp; 123 called</h3>
+      <div class="stat-row"><span>Agreed for pickup</span><span class="val">78%</span></div>
+      <div class="stat-row"><span>NetBox recovered</span><span class="val">61.8%</span></div>
+      <div class="stat-row"><span>Pending</span><span class="val">38.2%</span></div>
+      <div class="stat-row"><span>Partner interference</span><span class="val" style="color: var(--positive-600);">1 case (low)</span></div>
+      <div class="insight">Wiom controls process &rarr; recovery works.</div>
+    </div>
+    <div class="col-card">
+      <h3>Starnet U2 &nbsp;&middot;&nbsp; 104 called</h3>
+      <div class="stat-row"><span>Agreed for pickup</span><span class="val">47%</span></div>
+      <div class="stat-row"><span>NetBox recovered</span><span class="val" style="color: var(--negative-600);">15.4%</span></div>
+      <div class="stat-row"><span>Pending</span><span class="val">80.8%</span></div>
+      <div class="stat-row"><span>"Partner took router"</span><span class="val" style="color: var(--warning-600);">80</span></div>
+      <div class="insight">Custody compromised &rarr; enforcement is critical for v1.</div>
+    </div>
+  </div>
+  <div class="bottomline">
+    <strong>Determinism is necessary but insufficient.</strong> v1 must strengthen process custody and containment under R2 conditions.
+  </div>
+</div>
+
+<!-- SLIDE 9: v0 → v1 -->
+<div class="slide">
+  <div class="slide-label">The Iteration Loop</div>
+  <h2>v0 Learnings <span class="accent">&rarr; v1 Design</span></h2>
+  <ul class="bullets">
+    <li><strong>Supply is the binding constraint for U1</strong> &rarr; v1: earlier supply activation trigger, pre-mapped partner coverage</li>
+    <li><strong>Process custody is fragile under R2 pressure</strong> &rarr; v1: integrity OS for containment + enforcement layer</li>
+    <li><strong>Router pickup at 7.5% across notice partners</strong> &rarr; v1: tighter pickup SLA, ownership, closure loops</li>
+  </ul>
+  <div class="open-items">
+    <h3>Open items v1 is actively addressing</h3>
+    <ul>
+      <li>FNF settlement: in-app vs offline; wallet visibility window</li>
+      <li>Legacy non-PayG customers &rarr; PayG: cost bearer + ceiling</li>
+      <li>Financial visibility for restricted partners (read-only vs minimal, by R1/R2)</li>
+      <li>Structural risk: "supply down" not fixable when responsible partner is task-blocked</li>
+    </ul>
+  </div>
+</div>
+
+<!-- SLIDE 10: GENERALIZED FRAMEWORK -->
+<div class="slide">
+  <div class="slide-label">The Bigger Picture</div>
+  <h2>This Is How <span class="accent">Every OS Will Evolve</span></h2>
+  <div class="flow closing-flow">
+    <div class="flow-step">Write OS</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">Ship v0 (people-led)</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">Learn from real data</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">Refine to v1</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">v1.5: Productize or Kill</div>
+  </div>
+  <ul class="bullets">
+    <li>Exit OS is the <strong>first proof-point</strong> &mdash; not the last</li>
+    <li>Same cadence applies to every OS we build going forward</li>
+    <li><strong>Speed of learning &gt; perfection of v0</strong></li>
+    <li>The forcing function at v1.5 ensures nothing stays manual forever</li>
+  </ul>
+  <div class="bottomline">
+    <strong>The framework works.</strong> v0 ran, surfaced truth, and v1 is better for it. That's the system doing its job.
+  </div>
+</div>
+</div>
+
+<!-- NAVIGATION BAR -->
+<div class="nav-bar">
+  <div class="slide-counter" id="slideCounter">1 / 10</div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="nav-btns">
+    <button class="nav-btn" onclick="prevSlide()" title="Previous">&larr;</button>
+    <button class="nav-btn" onclick="nextSlide()" title="Next">&rarr;</button>
+  </div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  // Sync channel with remote
+  const channel = new BroadcastChannel('deck-sync');
+
+  function showSlide(n, broadcast = true) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('progressFill').style.width = ((current + 1) / total * 100) + '%';
+    if (broadcast) channel.postMessage({ slide: current, from: 'deck' });
+  }
+
+  function nextSlide() { showSlide(current + 1); }
+  function prevSlide() { showSlide(current - 1); }
+
+  // Listen for remote control
+  channel.onmessage = function(e) {
+    if (e.data.from === 'remote') showSlide(e.data.slide, false);
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+    if (e.key === 'Home') { showSlide(0); }
+    if (e.key === 'End') { showSlide(total - 1); }
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', function(e) {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+  });
+</script>
+</body>
+</html>
