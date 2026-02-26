@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OS-First Execution: From Philosophy to Proof-Point</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
-  /* ===== RESET & BASE ===== */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
@@ -45,7 +45,6 @@
     position: absolute; top: 0; left: 0;
     opacity: 0; transition: opacity 0.4s ease;
   }
-
   .slide.active { display: flex; opacity: 1; }
 
   .slide-label {
@@ -128,7 +127,24 @@
   .nav-bar .slide-counter { font-size: 0.85rem; color: var(--neutral-500); font-weight: 600; min-width: 5rem; }
   .progress-bar { flex: 1; height: 3px; background: var(--neutral-800); border-radius: 2px; margin: 0 1.5rem; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--brand-primary); border-radius: 2px; transition: width 0.4s ease; }
-  .nav-btns { display: flex; gap: 0.5rem; min-width: 5rem; justify-content: flex-end; }
+
+  .nav-right { display: flex; align-items: center; gap: 1rem; }
+  .remote-code {
+    font-size: 0.75rem; color: var(--neutral-500); font-weight: 600;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .remote-code .code {
+    font-family: 'Courier New', monospace; font-size: 0.9rem; font-weight: 700;
+    letter-spacing: 0.15em; padding: 0.2rem 0.5rem; border-radius: 4px;
+    background: var(--neutral-800); border: 1px solid var(--neutral-700);
+  }
+  .remote-code .code.connected { color: var(--positive-600); border-color: var(--positive-600); }
+  .remote-code .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--neutral-700);
+  }
+  .remote-code .dot.connected { background: var(--positive-600); }
+
+  .nav-btns { display: flex; gap: 0.5rem; }
   .nav-btn {
     background: var(--neutral-800); border: 1px solid var(--neutral-700); color: var(--neutral-white);
     width: 2.2rem; height: 2.2rem; border-radius: 6px; cursor: pointer;
@@ -305,7 +321,7 @@
   </div>
 </div>
 
-<!-- SLIDE 9: v0 → v1 -->
+<!-- SLIDE 9: v0 to v1 -->
 <div class="slide">
   <div class="slide-label">The Iteration Loop</div>
   <h2>v0 Learnings <span class="accent">&rarr; v1 Design</span></h2>
@@ -355,10 +371,17 @@
 <!-- NAVIGATION BAR -->
 <div class="nav-bar">
   <div class="slide-counter" id="slideCounter">1 / 10</div>
-  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-  <div class="nav-btns">
-    <button class="nav-btn" onclick="prevSlide()" title="Previous">&larr;</button>
-    <button class="nav-btn" onclick="nextSlide()" title="Next">&rarr;</button>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:10%"></div></div>
+  <div class="nav-right">
+    <div class="remote-code">
+      <span class="dot" id="connDot"></span>
+      <span>Remote:</span>
+      <span class="code" id="roomCode">...</span>
+    </div>
+    <div class="nav-btns">
+      <button class="nav-btn" onclick="prevSlide()" title="Previous">&larr;</button>
+      <button class="nav-btn" onclick="nextSlide()" title="Next">&rarr;</button>
+    </div>
   </div>
 </div>
 
@@ -366,26 +389,58 @@
   const slides = document.querySelectorAll('.slide');
   const total = slides.length;
   let current = 0;
+  let remoteConn = null;
 
-  // Sync channel with remote
-  const channel = new BroadcastChannel('deck-sync');
+  // Generate 4-digit room code
+  const roomCode = String(Math.floor(1000 + Math.random() * 9000));
+  document.getElementById('roomCode').textContent = roomCode;
 
-  function showSlide(n, broadcast = true) {
+  // PeerJS — host
+  const peer = new Peer('deck-' + roomCode, { debug: 0 });
+
+  peer.on('open', function() {
+    console.log('Deck peer ready, code:', roomCode);
+  });
+
+  peer.on('connection', function(conn) {
+    remoteConn = conn;
+    document.getElementById('connDot').classList.add('connected');
+    document.getElementById('roomCode').classList.add('connected');
+
+    conn.on('data', function(data) {
+      if (typeof data.slide === 'number') showSlide(data.slide, false);
+    });
+
+    conn.on('close', function() {
+      remoteConn = null;
+      document.getElementById('connDot').classList.remove('connected');
+      document.getElementById('roomCode').classList.remove('connected');
+    });
+
+    // Send current slide to newly connected remote
+    conn.on('open', function() {
+      conn.send({ slide: current });
+    });
+  });
+
+  peer.on('error', function(err) {
+    console.warn('Peer error:', err.type, err);
+  });
+
+  function showSlide(n, broadcast) {
+    if (broadcast === undefined) broadcast = true;
     slides[current].classList.remove('active');
     current = Math.max(0, Math.min(n, total - 1));
     slides[current].classList.add('active');
     document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + total;
     document.getElementById('progressFill').style.width = ((current + 1) / total * 100) + '%';
-    if (broadcast) channel.postMessage({ slide: current, from: 'deck' });
+    if (broadcast && remoteConn && remoteConn.open) {
+      remoteConn.send({ slide: current });
+    }
   }
 
   function nextSlide() { showSlide(current + 1); }
   function prevSlide() { showSlide(current - 1); }
-
-  // Listen for remote control
-  channel.onmessage = function(e) {
-    if (e.data.from === 'remote') showSlide(e.data.slide, false);
-  };
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
