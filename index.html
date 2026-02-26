@@ -172,8 +172,8 @@
   .fs-overlay-box .msg { font-size: 1.2rem; font-weight: 600; color: var(--neutral-white); }
   .fs-overlay-box .sub { font-size: 0.85rem; color: var(--neutral-500); margin-top: 0.4rem; }
 
-  :fullscreen .nav-bar { display: none; }
-  :fullscreen .brand-mark { display: none; }
+  body.is-fullscreen .nav-bar { display: none !important; }
+  body.is-fullscreen .brand-mark { display: none !important; }
 
   .slide.title-slide { justify-content: center; align-items: flex-start; }
   .slide.title-slide h1 { font-size: 3.2rem; }
@@ -470,7 +470,15 @@
   function nextSlide() { showSlide(current + 1); }
   function prevSlide() { showSlide(current - 1); }
 
-  // Fullscreen
+  // Fullscreen state tracking
+  document.addEventListener('fullscreenchange', function() {
+    if (document.fullscreenElement) {
+      document.body.classList.add('is-fullscreen');
+    } else {
+      document.body.classList.remove('is-fullscreen');
+    }
+  });
+
   function showFsOverlay() {
     if (document.fullscreenElement) return; // already fullscreen
     document.getElementById('fsOverlay').classList.add('visible');
