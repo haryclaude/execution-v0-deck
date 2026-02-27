@@ -422,38 +422,62 @@
   const roomCode = String(Math.floor(1000 + Math.random() * 9000));
   document.getElementById('roomCode').textContent = roomCode;
 
-  // PeerJS — host
-  const peer = new Peer('deck-' + roomCode, { debug: 0 });
+  // PeerJS — host with retry
+  let peer = null;
 
-  peer.on('open', function() {
-    console.log('Deck peer ready, code:', roomCode);
-  });
-
-  peer.on('connection', function(conn) {
-    remoteConn = conn;
-    document.getElementById('connDot').classList.add('connected');
-    document.getElementById('roomCode').classList.add('connected');
-
-    conn.on('data', function(data) {
-      if (typeof data.slide === 'number') showSlide(data.slide, false);
-      if (data.action === 'fullscreen') showFsOverlay();
+  function initPeer() {
+    peer = new Peer('deck-' + roomCode, {
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
     });
 
-    conn.on('close', function() {
-      remoteConn = null;
-      document.getElementById('connDot').classList.remove('connected');
-      document.getElementById('roomCode').classList.remove('connected');
+    peer.on('open', function(id) {
+      console.log('Deck peer ready:', id);
+      document.getElementById('roomCode').textContent = roomCode;
     });
 
-    // Send current slide to newly connected remote
-    conn.on('open', function() {
-      conn.send({ slide: current });
-    });
-  });
+    peer.on('connection', function(conn) {
+      remoteConn = conn;
+      document.getElementById('connDot').classList.add('connected');
+      document.getElementById('roomCode').classList.add('connected');
 
-  peer.on('error', function(err) {
-    console.warn('Peer error:', err.type, err);
-  });
+      conn.on('data', function(data) {
+        if (typeof data.slide === 'number') showSlide(data.slide, false);
+        if (data.action === 'fullscreen') showFsOverlay();
+      });
+
+      conn.on('close', function() {
+        remoteConn = null;
+        document.getElementById('connDot').classList.remove('connected');
+        document.getElementById('roomCode').classList.remove('connected');
+      });
+
+      conn.on('open', function() {
+        conn.send({ slide: current });
+      });
+    });
+
+    peer.on('error', function(err) {
+      console.warn('Peer error:', err.type, err);
+      if (err.type === 'unavailable-id') {
+        // ID taken from stale session — retry with new code after destroy
+        peer.destroy();
+        setTimeout(initPeer, 1000);
+      }
+    });
+
+    peer.on('disconnected', function() {
+      // Auto-reconnect to signaling server
+      if (!peer.destroyed) peer.reconnect();
+    });
+  }
+
+  initPeer();
 
   function showSlide(n, broadcast) {
     if (broadcast === undefined) broadcast = true;

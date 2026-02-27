@@ -306,26 +306,44 @@
   function prevSlide() { showSlide(current - 1); }
 
   // Connect to deck
+  let remotePeer = null;
+  let retryCount = 0;
+  const MAX_RETRIES = 3;
+
   function connectToDeck() {
     const code = document.getElementById('codeInput').value.trim();
     if (code.length !== 4 || !/^\d{4}$/.test(code)) {
       document.getElementById('codeInput').classList.add('error');
-      document.getElementById('connectStatus').textContent = 'Enter a 4-digit code';
-      document.getElementById('connectStatus').classList.add('error');
+      setStatus('Enter a 4-digit code', true);
       return;
     }
 
     document.getElementById('connectBtn').disabled = true;
-    document.getElementById('connectStatus').textContent = 'Connecting...';
-    document.getElementById('connectStatus').classList.remove('error');
     document.getElementById('codeInput').classList.remove('error');
+    setStatus('Connecting... (attempt ' + (retryCount + 1) + ')');
 
-    const peer = new Peer({ debug: 0 });
+    // Clean up previous peer
+    if (remotePeer && !remotePeer.destroyed) remotePeer.destroy();
 
-    peer.on('open', function() {
-      conn = peer.connect('deck-' + code, { reliable: true });
+    remotePeer = new Peer({
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+
+    var connected = false;
+
+    remotePeer.on('open', function() {
+      setStatus('Registered. Reaching deck...');
+      conn = remotePeer.connect('deck-' + code, { reliable: true, serialization: 'json' });
 
       conn.on('open', function() {
+        connected = true;
+        retryCount = 0;
         document.getElementById('connectScreen').classList.add('hidden');
         document.getElementById('remoteScreen').classList.add('active');
         updateUI();
@@ -341,31 +359,50 @@
         document.getElementById('connectScreen').classList.remove('hidden');
         document.getElementById('remoteScreen').classList.remove('active');
         document.getElementById('connectBtn').disabled = false;
-        document.getElementById('connectStatus').textContent = 'Disconnected. Reconnect?';
+        setStatus('Disconnected. Tap Connect to rejoin.');
         conn = null;
       });
 
       conn.on('error', function(err) {
-        document.getElementById('connectBtn').disabled = false;
-        document.getElementById('connectStatus').textContent = 'Connection error. Try again.';
-        document.getElementById('connectStatus').classList.add('error');
+        if (!connected) retryConnect(code);
       });
 
-      // Timeout if no connection after 8 seconds
+      // Timeout — auto-retry if not connected
       setTimeout(function() {
-        if (!conn || !conn.open) {
-          document.getElementById('connectBtn').disabled = false;
-          document.getElementById('connectStatus').textContent = 'Could not connect. Check the code.';
-          document.getElementById('connectStatus').classList.add('error');
-        }
-      }, 8000);
+        if (!connected) retryConnect(code);
+      }, 6000);
     });
 
-    peer.on('error', function(err) {
-      document.getElementById('connectBtn').disabled = false;
-      document.getElementById('connectStatus').textContent = 'Error: ' + err.type + '. Try again.';
-      document.getElementById('connectStatus').classList.add('error');
+    remotePeer.on('error', function(err) {
+      console.warn('Peer error:', err.type);
+      if (err.type === 'peer-unavailable') {
+        setStatus('Deck not found. Check the code and make sure the deck page is open.', true);
+        document.getElementById('connectBtn').disabled = false;
+        retryCount = 0;
+      } else if (!connected) {
+        retryConnect(code);
+      }
     });
+  }
+
+  function retryConnect(code) {
+    retryCount++;
+    if (retryCount <= MAX_RETRIES) {
+      setStatus('Retrying... (attempt ' + (retryCount + 1) + ')');
+      if (remotePeer && !remotePeer.destroyed) remotePeer.destroy();
+      setTimeout(function() { connectToDeck(); }, 1500);
+    } else {
+      setStatus('Could not connect after ' + MAX_RETRIES + ' attempts. Check code & ensure deck is open.', true);
+      document.getElementById('connectBtn').disabled = false;
+      retryCount = 0;
+    }
+  }
+
+  function setStatus(msg, isError) {
+    var el = document.getElementById('connectStatus');
+    el.textContent = msg;
+    if (isError) el.classList.add('error');
+    else el.classList.remove('error');
   }
 
   // Enter key to connect
